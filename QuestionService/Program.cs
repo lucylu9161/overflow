@@ -30,6 +30,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseAuthentication();   // <-- Add this
 app.UseAuthorization();
 
 app.MapControllers();
