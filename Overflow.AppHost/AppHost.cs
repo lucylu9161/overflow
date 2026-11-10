@@ -11,6 +11,25 @@ var postgres = builder.AddPostgres("postgres", port: 5432)
     .WithPgAdmin()
     .WithPgWeb();
 
+// var typesense = builder.AddContainer("typesense", "typesense/typesense", "29.0")
+//     .WithVolume("typesense-data", "/data")
+//     .WithEnvironment("TYPESENSE_DATA_DIR", "/data")
+//     .WithEnvironment("TYPESENSE_ENABLE_CORS", "true")
+//     //.WithEnvironment("TYPESENSE_API_KEY", typesenseApiKey)
+//     .WithHttpEndpoint(8108, 8108, name: "typesense");
+//
+// var typeSenseContainer = typesense.GetEndpoint("typesense");
+
+var typesense = builder.AddContainer(
+        "typesense",
+        "typesense/typesense",
+        "29.0")
+    .WithArgs("--data-dir", "/data", "--api-key", "xyz", "--enable-cors")
+    .WithVolume("typesense-data", "/data")
+    .WithEndpoint(8108, 8108, name: "typesense");
+
+var typeSenseContainer = typesense.GetEndpoint("typesense");
+
 var questionDb = postgres.AddDatabase("questionDb");
 var questionService = builder.AddProject<Projects.QuestionService>("question-svc")
      .WithReference(keycloak)
@@ -19,6 +38,14 @@ var questionService = builder.AddProject<Projects.QuestionService>("question-svc
      .WaitFor(keycloak)
      .WaitFor(questionDb);
 //     .WaitFor(rabbitmq);
+
+var searchService = builder.AddProject<Projects.SearchService>("search-svc")
+    //.WithEnvironment("typesense-api-key", typesenseApiKey)
+    .WithReference(typeSenseContainer)
+    //.WithReference(rabbitmq)
+    .WaitFor(typesense);
+    //.WaitFor(rabbitmq);
+
 
 builder.Build().Run();
 
