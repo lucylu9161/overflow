@@ -26,7 +26,7 @@ var typesense = builder.AddContainer(
         "29.0")
     .WithArgs("--data-dir", "/data", "--api-key", typesenseApiKey, "--enable-cors")
     .WithVolume("typesense-data", "/data")
-    .WithEndpoint(8108, 8108, name: "typesense");
+    .WithHttpEndpoint(8108, 8108, name: "typesense");
 
 var typeSenseContainer = typesense.GetEndpoint("typesense");
 
