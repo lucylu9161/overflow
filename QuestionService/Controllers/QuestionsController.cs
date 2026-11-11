@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using QuestionService.Data;
 using QuestionService.DTOs;
 using QuestionService.Models;
+using QuestionService.Services;
 using Wolverine;
 
 
@@ -15,7 +16,7 @@ namespace QuestionService.Controllers;
 
 [ApiController]
 [Route("questions")] // 👈 Maps this controller to http://localhost:7001/questions
-public class QuestionsController(QuestionDbContext db, IMessageBus bus) : ControllerBase
+public class QuestionsController(QuestionDbContext db, IMessageBus bus, TagService tagService) : ControllerBase
 {
     // GET /questions
     // [HttpGet]
@@ -28,16 +29,8 @@ public class QuestionsController(QuestionDbContext db, IMessageBus bus) : Contro
     [HttpPost]
     public async Task<ActionResult<Question>> CreateQuestion(CreateQuestionDto dto)
     {
-        var validTags = await db.Tags
-            .Where(x => dto.Tags.Contains(x.Slug))
-            .ToListAsync();
-
-        var missing = dto.Tags
-            .Except(validTags.Select(x => x.Slug).ToList())
-            .ToList();
-
-        if (missing.Count != 0)
-            return BadRequest($"Invalid tags: {string.Join(", ", missing)}");
+        if (!await tagService.AreTagsValidAsync(dto.Tags))
+            return BadRequest("Invalid tags");
         
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var name = User.FindFirstValue("name");
@@ -112,17 +105,9 @@ public class QuestionsController(QuestionDbContext db, IMessageBus bus) : Contro
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId != question.AskerId) return Forbid();
         
-        var validTags = await db.Tags
-            .Where(x => dto.Tags.Contains(x.Slug))
-            .ToListAsync();
-
-        var missing = dto.Tags
-            .Except(validTags.Select(x => x.Slug).ToList())
-            .ToList();
-
-        if (missing.Count != 0)
-            return BadRequest($"Invalid tags: {string.Join(", ", missing)}");
-
+        if (!await tagService.AreTagsValidAsync(dto.Tags))
+            return BadRequest("Invalid tags");
+        
         question.Title = dto.Title;
         question.Content = dto.Content;
         question.TagSlugs = dto.Tags;
@@ -148,5 +133,3 @@ public class QuestionsController(QuestionDbContext db, IMessageBus bus) : Contro
         return NoContent();
     }
 }
-
-

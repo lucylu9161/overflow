@@ -30,7 +30,7 @@ var typesense = builder.AddContainer(
 
 var typeSenseContainer = typesense.GetEndpoint("typesense");
 
-var questionDb = postgres.AddDatabase("questionDb");
+var questionDb = postgres.AddDatabase("questionDb", databaseName: "questiondb");
 
 var rabbitmq = builder.AddRabbitMQ("messaging")
     .WithDataVolume("rabbitmq-data")
