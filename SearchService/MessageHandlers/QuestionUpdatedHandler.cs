@@ -23,3 +23,14 @@ public class QuestionUpdatedHandler(ITypesenseClient client)
         return Regex.Replace(content, "<.*?>", string.Empty);
     }
 }
+
+
+// var doc = new SearchQuestion
+// {
+//     Id = message.QuestionId,
+//     Title = message.Title,
+//     Content = StripHtml(message.Content),
+//     Tags = message.Tags.ToArray(),
+// };
+//
+// await client.UpdateDocument("questions", doc.Id, doc);
