@@ -10,6 +10,7 @@
     <ItemGroup>
         <PackageReference Include="Aspire.Keycloak.Authentication" Version="13.6.4-preview.1.26523.11" />
         <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.6.4" />
+        <PackageReference Include="HtmlSanitizer" Version="11.0.26" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
           <PrivateAssets>all</PrivateAssets>
@@ -22,6 +23,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Contracts\Contracts.csproj" />
       <ProjectReference Include="..\Overflow.ServiceDefaults\Overflow.ServiceDefaults.csproj" />
+      <ProjectReference Include="..\Reputation\Reputation.csproj" />
     </ItemGroup>
 
 </Project>

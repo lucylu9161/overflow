@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Contracts;
 using FastExpressionCompiler;
+using Ganss.Xss;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ using QuestionService.Data;
 using QuestionService.DTOs;
 using QuestionService.Models;
 using QuestionService.Services;
+using Reputation;
 using Wolverine;
 
 
@@ -81,7 +83,11 @@ public class QuestionsController(QuestionDbContext db, IMessageBus bus, TagServi
     [HttpGet("{id}")]
     public async Task<ActionResult<Question>> GetQuestion(string id)
     {
-        var question = await db.Questions.FindAsync(id);
+        var question = await db.Questions
+            .Include(x => x.Answers)
+            .FirstOrDefaultAsync(x => x.Id == id);
+    
+        if (question is null) return NotFound();
 
         if (question is null)
             return NotFound();
@@ -142,6 +148,100 @@ public class QuestionsController(QuestionDbContext db, IMessageBus bus, TagServi
         
         await bus.PublishAsync(new QuestionDeleted(question.Id));
 
+        return NoContent();
+    }
+    
+    [Authorize]
+    [HttpPost("{questionId}/answers")]
+    public async Task<ActionResult> PostAnswer(string questionId, CreateAnswerDto dto)
+    {
+        var question = await db.Questions.FindAsync(questionId);
+        
+        if (question is null) return NotFound();
+        
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var name = User.FindFirstValue("name");
+        
+        if (userId is null || name is null) return BadRequest("Cannot get user details");
+        
+        var sanitizer = new HtmlSanitizer();
+
+        var answer = new Answer
+        {
+            Content = sanitizer.Sanitize(dto.Content),
+            UserId = userId,
+            QuestionId = questionId
+        };
+        
+        question.Answers.Add(answer);
+        question.AnswerCount++;
+        
+        await db.SaveChangesAsync();
+        
+        await bus.PublishAsync(new AnswerCountUpdated(questionId, question.AnswerCount));
+        
+        return Created($"/questions/{questionId}", answer);
+    }
+    
+    [Authorize]
+    [HttpPut("{questionId}/answers/{answerId}")]
+    public async Task<ActionResult> UpdateAnswer(string questionId, string answerId, CreateAnswerDto dto)
+    {
+        var answer = await db.Answers.FindAsync(answerId);
+        if (answer is null) return NotFound();
+        if (answer.QuestionId != questionId) return BadRequest("Cannot update answer details");
+        
+        var sanitizer = new HtmlSanitizer();
+        
+        answer.Content = sanitizer.Sanitize(dto.Content);
+        answer.UpdatedAt = DateTime.UtcNow;
+        
+        await db.SaveChangesAsync();
+        
+        return NoContent();
+    }
+    
+    [Authorize]
+    [HttpDelete("{questionId}/answers/{answerId}")]
+    public async Task<ActionResult> DeleteAnswer(string questionId, string answerId)
+    {
+        var answer = await db.Answers.FindAsync(answerId);
+        var question = await db.Questions.FindAsync(questionId);
+        if (answer is null || question is null) return NotFound();
+        if (answer.QuestionId != questionId || answer.Accepted) return BadRequest("Cannot delete this answer");
+        
+        db.Answers.Remove(answer);
+        question.AnswerCount--;
+        
+        await db.SaveChangesAsync();
+        
+        await bus.PublishAsync(new AnswerCountUpdated(questionId, question.AnswerCount));
+        
+        return NoContent();
+    }
+    
+    [Authorize]
+    [HttpPost("{questionId}/answers/{answerId}/accept")]
+    public async Task<ActionResult> AcceptAnswer(string questionId, string answerId)
+    {
+        var answer = await db.Answers.FindAsync(answerId);
+        var question = await db.Questions.FindAsync(questionId);
+        if (answer is null || question is null) return NotFound();
+        if (answer.QuestionId != questionId || question.HasAcceptedAnswer) return BadRequest("Cannot accept answer");
+
+        answer.Accepted = true;
+        question.HasAcceptedAnswer = true;
+        
+        await db.SaveChangesAsync();
+        
+        await bus.PublishAsync(new AnswerAccepted(questionId));
+        
+        await bus.PublishAsync(ReputationHelper.MakeEvent(
+            answer.UserId,
+            ReputationReason.AnswerAccepted,
+            question.AskerId
+        ));
+        
         return NoContent();
     }
 }
