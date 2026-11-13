@@ -51,6 +51,37 @@ var searchService = builder.AddProject<Projects.SearchService>("search-svc")
     .WaitFor(typesense)
     .WaitFor(rabbitmq);
 
+var yarp = builder.AddYarp("gateway")
+    .WithConfiguration(yarpBuilder =>
+    {
+        yarpBuilder.AddRoute("/questions/{**catch-all}", questionService);
+        yarpBuilder.AddRoute("/tags/{**catch-all}", questionService);
+        yarpBuilder.AddRoute("/search/{**catch-all}", searchService);
+    })
+    .WithHostPort(8001);
+
+
+
+// var yarp = builder.AddYarp("gateway")
+//     .WithConfiguration(yarpBuilder =>
+//     {
+//         yarpBuilder.AddRoute("/questions/{**catch-all}", questionService);
+//         yarpBuilder.AddRoute("/tags/{**catch-all}", questionService);
+//         yarpBuilder.AddRoute("/search/{**catch-all}", searchService);
+//         yarpBuilder.AddRoute("/test/{**catch-all}", questionService);
+//         // yarpBuilder.AddRoute("/profiles/{**catch-all}", profileService);
+//         // yarpBuilder.AddRoute("/stats/{**catch-all}", statService);
+//         // yarpBuilder.AddRoute("/votes/{**catch-all}", voteService);
+//     })
+//     .WithEnvironment("ASPNETCORE_URLS", "http://*:8001")
+//     .WithEndpoint(port: 8001, targetPort: 8001, scheme: "http", name: "gateway", isExternal: true);
+
+    // .WithHostPort(8001)
+    // .WithEnvironment("VIRTUAL_HOST", "overflow-api.trycatchlearn.com")
+    // .WithEnvironment("VIRTUAL_PORT", "8001")
+    // .WithEnvironment("LETSENCRYPT_HOST", "overflow-api.trycatchlearn.com")
+    // .WithEnvironment("LETSENCRYPT_EMAIL", "trycatchlearn@outlook.com");
+
 
 builder.Build().Run();
 
