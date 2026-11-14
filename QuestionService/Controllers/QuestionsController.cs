@@ -35,18 +35,19 @@ public class QuestionsController(QuestionDbContext db, IMessageBus bus, TagServi
         if (!await tagService.AreTagsValidAsync(dto.Tags))
             return BadRequest("Invalid tags");
         
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var name = User.FindFirstValue("name");
-
-        if (userId is null || name is null)
-            return BadRequest("Cannot get user details");
+        // var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        // var name = User.FindFirstValue("name");
+        //
+        // if (userId is null || name is null)
+        //     return BadRequest("Cannot get user details");
 
         var question = new Question
         {
             Title = dto.Title,
             Content = dto.Content,
             TagSlugs = dto.Tags,
-            AskerId = userId
+            //AskerId = userId
+            AskerId = "aud"
             //AskerDisplayName = name
         };
         
